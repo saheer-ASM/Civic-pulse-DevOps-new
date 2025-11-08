@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # MongoDB service
+  mongo:
+    image: mongo:5
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=civicpulse
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Backend service
+  backend:
+    build: ./server
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGODB_URI=mongodb://mongo:27017/civicpulse
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - BCRYPT_SALT_ROUNDS=12
+      - CLIENT_URL=http://localhost:3000
+      - LOG_LEVEL=info
+    depends_on:
+      - mongo
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend service
+  frontend:
+    build: ./client
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  app-network:
+    driver: bridge

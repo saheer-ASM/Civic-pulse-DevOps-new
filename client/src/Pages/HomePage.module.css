@@ -1,0 +1,38 @@
+.homePage {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f4f6fa;
+  min-height: 100vh;
+}
+
+.heroSection {
+  background: linear-gradient(rgba(0,40,120,0.7), rgba(0,40,120,0.7)),  center/cover no-repeat;
+  color: #fff;
+  min-height: 50vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heroContent {
+  text-align: center;
+  background: rgba(0,0,0,0.3);
+  padding: 3rem 2rem;
+  border-radius: 14px;
+  box-shadow: 0 0 18px 2px rgba(0,0,0,0.11);
+}
+
+.ctaButton {
+  margin-top: 1.5rem;
+  padding: 0.8rem 2.5rem;
+  font-size: 1.1rem;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ctaButton:hover {
+  background: #135ba1;
+}

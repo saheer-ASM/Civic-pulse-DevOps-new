@@ -1,0 +1,14 @@
+html {
+  scroll-behavior: smooth;
+}
+ 
+body {
+  margin: 0;
+  padding: 0;
+  background: #f4f6fa;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
