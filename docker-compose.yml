@@ -1,19 +1,5 @@
-version: '3.8'
-
 services:
-  # MongoDB service
-  mongo:
-    image: mongo:5
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    environment:
-      - MONGO_INITDB_DATABASE=civicpulse
-    networks:
-      - app-network
-    restart: unless-stopped
-
+  
   # Backend service
   backend:
     build: ./server
@@ -22,13 +8,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - MONGODB_URI=mongodb://mongo:27017/civicpulse
+      - MONGODB_URI=mongodb+srv://civicUser:.-H-7TbdMD46te6@cluster0.tpiup7t.mongodb.net/?appName=Cluster0
       - JWT_SECRET=your-super-secret-jwt-key-change-in-production
       - BCRYPT_SALT_ROUNDS=12
       - CLIENT_URL=http://localhost:3000
       - LOG_LEVEL=info
-    depends_on:
-      - mongo
     volumes:
       - ./server:/app
       - /app/node_modules
@@ -54,8 +38,6 @@ services:
     networks:
       - app-network
 
-volumes:
-  mongodb_data:
 
 networks:
   app-network:

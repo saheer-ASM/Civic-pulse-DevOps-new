@@ -4,10 +4,23 @@ import mongoose from "mongoose";
 import authRoutes from "./routes/authRoutes.js";
 import complaintRoutes from "./routes/complaintRoutes.js";
 import cors from "cors";
+import path from "path";
 
-dotenv.config();
+
+
+// Load .env from server/ folder
+dotenv.config({ path: path.resolve("./server/.env") });
+
 
 const app = express();
+
+const isTest = process.env.NODE_ENV === "test"; // new
+
+app.get('/', (req, res) => {
+  res.send('Civic Pulse DevOps Backend is running!');
+});
+
+
 
 // CORS configuration - UPDATED for Docker
 app.use(cors({
@@ -44,8 +57,16 @@ app.get('/health', (req, res) => {
 
 // Test route
 app.get('/api', (req, res) => {
-  res.json({ message: '✅ Backend API is working!' });
+  res.json({ message: '✅ Backend API is working! new' });
 });
+
+
+
+// Test route
+app.get('/api/test', (req, res) => {
+  res.json({ message: '✅ Backend API /api/test is working!' });
+});
+ 
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -55,7 +76,8 @@ app.use("/api/complaints", complaintRoutes);
 const port = process.env.PORT || 5000;
 
 // Connect to DB and start server
-connectDB().then(() => {
+if(!isTest) { // new bracket
+  connectDB().then(() => {
   app.listen(port, () => {
     console.log(`Server running on port ${port}`);
     console.log(`API available at http://localhost:${port}`);
@@ -64,3 +86,7 @@ connectDB().then(() => {
 }).catch(err => {
   console.error("Failed to start server:", err);
 });
+} 
+
+
+export default app; ///new
