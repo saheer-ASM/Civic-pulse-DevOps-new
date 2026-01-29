@@ -2,10 +2,11 @@ pipeline {
     agent any
     
     tools {
-        nodejs 'node' // This name must match what you configured in Jenkins Tools
+        nodejs 'node' 
     }
 
     environment {
+        // Correctly handle Docker credentials using environment variables
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
         AWS_REGION = 'us-east-1'
         EKS_CLUSTER_NAME = 'civic-pulse-eks'
@@ -23,11 +24,9 @@ pipeline {
         stage('Unit Test') {
             steps {
                 dir('server') {
-                    // Added --passWithNoTests and --watchAll=false for CI
                     sh 'npm install && npm test -- --watchAll=false --passWithNoTests'
                 }
                 dir('client') {
-                    // Added --passWithNoTests to solve the current error
                     sh 'npm install && npm test -- --watchAll=false --passWithNoTests'
                 }
             }
@@ -66,23 +65,34 @@ pipeline {
 
         stage('Infrastructure Provisioning (Terraform)') {
             steps {
-                dir('infrastructure') {
-                    sh '''
-                    terraform init
-                    terraform validate
-                    terraform plan -out=tfplan
-                    terraform apply tfplan
-                    '''
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                credentialsId: 'aws-creds', 
+                                accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                                secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    dir('infrastructure') {
+                        sh '''
+                        terraform init
+                        terraform validate
+                        terraform plan -out=tfplan
+                        terraform apply -auto-approve tfplan
+                        '''
+                    }
                 }
             }
         }
 
         stage('Configure kubectl for EKS') {
             steps {
-                sh '''
-                aws eks update-kubeconfig --name ${EKS_CLUSTER_NAME} --region ${AWS_REGION}
-                kubectl get nodes
-                '''
+                // Added credentials wrapper so the AWS CLI can talk to your account
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', 
+                                credentialsId: 'aws-creds', 
+                                accessKeyVariable: 'AWS_ACCESS_KEY_ID', 
+                                secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                    sh '''
+                    aws eks update-kubeconfig --name ${EKS_CLUSTER_NAME} --region ${AWS_REGION}
+                    kubectl get nodes
+                    '''
+                }
             }
         }
 
@@ -129,19 +139,9 @@ pipeline {
             sh 'docker system prune -f'
         }
         
-        failure {
-            sh '''
-            echo "Deployment failed. Checking logs..."
-            kubectl logs -l app.kubernetes.io/name=civic-pulse --tail=50 || true
-            '''
-        }
-        
         success {
-            sh '''
-            echo "Deployment successful!"
-            echo "Application URL: http://civic-pulse.local"
-            kubectl get ingress
-            '''
+            echo "Deployment successful for EG/2022/5304!"
+            sh 'kubectl get ingress'
         }
     }
 }
