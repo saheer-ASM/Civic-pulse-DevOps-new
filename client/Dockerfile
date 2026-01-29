@@ -3,43 +3,42 @@ FROM node:18-alpine AS build
 
 WORKDIR /app
 
-# 1. Copy package files first to leverage Docker cache
-COPY package*.json ./
-
-# 2. Install dependencies (including legacy support for your MERN project)
-RUN npm ci --legacy-peer-deps
-
-# 3. Copy EVERYTHING from the client directory
-# This avoids "folder not found" errors by grabbing the whole structure at once
+# 1. Copy everything first so we can detect the structure
 COPY . .
 
-# 4. Verify the folder structure in the Jenkins log (Useful for debugging)
-RUN ls -la /app/public && ls -la /app/src
+# 2. SMART FIX: Check if files are nested in a 'client' subfolder and move them up
+# This solves the "public/index.html not found" error automatically.
+RUN if [ -d "client/public" ]; then \
+        echo "Nested structure detected. Moving files..."; \
+        mv client/* . && mv client/.* . 2>/dev/null || true; \
+    fi
 
-# 5. Make node_modules executables accessible
-RUN chmod -R +x node_modules/.bin
+# 3. Clean and install dependencies in the correct root
+RUN rm -rf node_modules && npm install --legacy-peer-deps
 
-# 6. Build the application
+# 4. Final verification of paths before building
+RUN ls -la public/index.html && ls -la src/index.js
+
+# 5. Build the application
 RUN npm run build
 
 # Production stage
 FROM nginx:alpine
 
-# Install curl for cluster-side health checks in EKS
+# Install curl for EKS health checks
 RUN apk add --no-cache curl
 
-# Copy built files from the build stage to the Nginx root
+# Copy the build output from the 'build' stage
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy your specific nginx configuration for React routing
+# Copy your nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Set proper permissions for the Nginx user
+# Set permissions
 RUN chown -R nginx:nginx /usr/share/nginx/html
 
 EXPOSE 80
 
-# Health check to ensure the container is serving traffic
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD curl -f http://localhost:80/ || exit 1
 
