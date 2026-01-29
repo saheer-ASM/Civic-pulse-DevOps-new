@@ -71,8 +71,8 @@ pipeline {
                                 secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     dir('infrastructure') {
                         sh '''
-                        # The -input=false and -reconfigure flags stop Terraform from asking questions
-                        terraform init -input=false -reconfigure
+                        # -migrate-state with -force-copy handles the automated move to S3
+                        terraform init -input=false -migrate-state -force-copy
                         terraform validate
                         terraform plan -out=tfplan -input=false
                         terraform apply -auto-approve tfplan
@@ -81,7 +81,7 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Configure kubectl for EKS') {
             steps {
                 // Added credentials wrapper so the AWS CLI can talk to your account
