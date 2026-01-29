@@ -9,6 +9,12 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci --legacy-peer-deps
 
+
+# Copy the specific folders we need
+COPY public ./public
+COPY src ./src
+COPY .env* ./
+
 # Copy source code
 COPY . .
 
