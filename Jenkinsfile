@@ -1,6 +1,10 @@
 pipeline {
     agent any
     
+    tools {
+        nodejs 'node' // This name must match what you configured in Jenkins Tools
+    }
+    
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
         AWS_REGION = 'us-east-1'
