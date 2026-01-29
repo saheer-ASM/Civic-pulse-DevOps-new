@@ -71,9 +71,10 @@ pipeline {
                                 secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     dir('infrastructure') {
                         sh '''
-                        terraform init
+                        # The -input=false and -reconfigure flags stop Terraform from asking questions
+                        terraform init -input=false -reconfigure
                         terraform validate
-                        terraform plan -out=tfplan
+                        terraform plan -out=tfplan -input=false
                         terraform apply -auto-approve tfplan
                         '''
                     }
