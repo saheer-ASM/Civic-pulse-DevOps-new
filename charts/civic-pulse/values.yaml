@@ -1,0 +1,97 @@
+replicaCount: 2
+
+# Client (Frontend) Configuration
+client:
+  image:
+    repository: moshaheer/civic-pulse-client
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 3000
+  
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  
+  env:
+    REACT_APP_API_URL: "http://civic-pulse-server:5000/api"
+
+# Server (Backend) Configuration
+server:
+  image:
+    repository: moshaheer/civic-pulse-server
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 5000
+    targetPort: 5000
+  
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  env:
+    NODE_ENV: "production"
+    PORT: 5000
+    DB_HOST: "mongodb"
+    DB_PORT: 27017
+    DB_NAME: "civic-pulse"
+
+# MongoDB Configuration
+mongodb:
+  enabled: true
+  image:
+    repository: mongo
+    tag: "6.0"
+  
+  service:
+    type: ClusterIP
+    port: 27017
+  
+  storage:
+    enabled: true
+    size: 10Gi
+    storageClassName: "ebs-sc"
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: civic-pulse.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: civic-pulse-tls
+      hosts:
+        - civic-pulse.local
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+# Node Selection
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

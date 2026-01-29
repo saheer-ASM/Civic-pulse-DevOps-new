@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: civic-pulse-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: changeme
+      MONGO_INITDB_DATABASE: civic-pulse
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend service (Express API)
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: civic-pulse-server
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - DB_HOST=mongodb
+      - DB_PORT=27017
+      - DB_NAME=civic-pulse
+      - DB_PASSWORD=changeme
+      - MONGODB_URI=mongodb://admin:changeme@mongodb:27017/civic-pulse?authSource=admin
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - BCRYPT_SALT_ROUNDS=12
+      - CLIENT_URL=http://localhost:3000
+      - LOG_LEVEL=info
+      - CORS_ORIGIN=http://localhost:3000
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./server/src:/app/src
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend service (React)
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: civic-pulse-client
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+      - REACT_APP_ENV=development
+    depends_on:
+      - server
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
