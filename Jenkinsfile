@@ -71,8 +71,15 @@ pipeline {
                                 secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
                     dir('infrastructure') {
                         sh '''
-                        # -migrate-state with -force-copy handles the automated move to S3
+                        echo "--- INITIALIZING TERRAFORM ---"
                         terraform init -input=false -migrate-state -force-copy
+                        
+                        echo "--- IMPORTING EXISTING RESOURCES ---"
+                        # These two lines MUST appear in your Jenkins Console Output
+                        terraform import aws_eks_cluster.civic_pulse_cluster civic-pulse-eks || echo "Cluster already in state"
+                        terraform import aws_iam_role.eks_worker_role civic-pulse-eks-worker-role || echo "Role already in state"
+                        
+                        echo "--- PLANNING DEPLOYMENT ---"
                         terraform validate
                         terraform plan -out=tfplan -input=false
                         terraform apply -auto-approve tfplan
@@ -81,6 +88,8 @@ pipeline {
                 }
             }
         }
+
+        
         
         stage('Configure kubectl for EKS') {
             steps {
