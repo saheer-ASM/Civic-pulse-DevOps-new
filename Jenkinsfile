@@ -109,13 +109,14 @@ pipeline {
         stage('Deploy with Helm to EKS') {
             steps {
                 sh '''
-                helm repo add civic-pulse ./charts || true
-                helm repo update
+                # No need to run 'helm repo add' or 'repo update' for local charts
+                echo "Deploying local Helm chart from ./charts/civic-pulse..."
+                
                 helm upgrade --install civic-pulse ./charts/civic-pulse \
-                  --namespace default \
-                  --set client.image.tag=${VERSION} \
-                  --set server.image.tag=${VERSION} \
-                  --wait
+                --namespace default \
+                --set client.image.tag=${VERSION} \
+                --set server.image.tag=${VERSION} \
+                --wait
                 '''
             }
         }
