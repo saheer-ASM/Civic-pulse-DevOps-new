@@ -1,0 +1,45 @@
+{
+    "nodegroup": {
+        "nodegroupName": "civic-pulse-node-group",
+        "nodegroupArn": "arn:aws:eks:us-east-1:709741857852:nodegroup/civic-pulse-eks/civic-pulse-node-group/50ce04a5-d7e2-a84c-de74-184044c6051b",
+        "clusterName": "civic-pulse-eks",
+        "version": "1.29",
+        "releaseVersion": "1.29.15-20251209",
+        "createdAt": "2026-01-29T15:58:01.844000+05:30",
+        "modifiedAt": "2026-01-31T13:07:56.134000+05:30",
+        "status": "DELETING",
+        "capacityType": "ON_DEMAND",
+        "scalingConfig": {
+            "minSize": 1,
+            "maxSize": 1,
+            "desiredSize": 1
+        },
+        "instanceTypes": [
+            "t3.small"
+        ],
+        "subnets": [
+            "subnet-0388d812647912107",
+            "subnet-023b8a0c79d5b066e"
+        ],
+        "amiType": "AL2_x86_64",
+        "nodeRole": "arn:aws:iam::709741857852:role/civic-pulse-eks-worker-role",
+        "labels": {},
+        "resources": {
+            "autoScalingGroups": [
+                {
+                    "name": "eks-civic-pulse-node-group-50ce04a5-d7e2-a84c-de74-184044c6051b"
+                }
+            ]
+        },
+        "diskSize": 20,
+        "health": {
+            "issues": []
+        },
+        "updateConfig": {
+            "maxUnavailable": 1
+        },
+        "tags": {
+            "Name": "civic-pulse-node-group"
+        }
+    }
+}
