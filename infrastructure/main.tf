@@ -13,12 +13,29 @@ terraform {
   }
 }
 
-
 provider "aws" {
   region = var.aws_region
 }
 
-# VPC
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"]
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 resource "aws_vpc" "civic_pulse_vpc" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -29,7 +46,6 @@ resource "aws_vpc" "civic_pulse_vpc" {
   }
 }
 
-# Internet Gateway
 resource "aws_internet_gateway" "civic_pulse_igw" {
   vpc_id = aws_vpc.civic_pulse_vpc.id
 
@@ -38,63 +54,23 @@ resource "aws_internet_gateway" "civic_pulse_igw" {
   }
 }
 
-# Public Subnets
-resource "aws_subnet" "public_subnet_1" {
+resource "aws_subnet" "public_subnet" {
   vpc_id                  = aws_vpc.civic_pulse_vpc.id
-  cidr_block              = var.public_subnet_1_cidr
+  cidr_block              = var.public_subnet_cidr
   availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "civic-pulse-public-subnet-1"
+    Name = "civic-pulse-public-subnet"
   }
 }
 
-resource "aws_subnet" "public_subnet_2" {
-  vpc_id                  = aws_vpc.civic_pulse_vpc.id
-  cidr_block              = var.public_subnet_2_cidr
-  availability_zone       = data.aws_availability_zones.available.names[1]
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "civic-pulse-public-subnet-2"
-  }
-}
-
-# Private Subnets
-resource "aws_subnet" "private_subnet_1" {
-  vpc_id            = aws_vpc.civic_pulse_vpc.id
-  cidr_block        = var.private_subnet_1_cidr
-  availability_zone = data.aws_availability_zones.available.names[0]
-
-  tags = {
-    Name = "civic-pulse-private-subnet-1"
-  }
-}
-
-resource "aws_subnet" "private_subnet_2" {
-  vpc_id            = aws_vpc.civic_pulse_vpc.id
-  cidr_block        = var.private_subnet_2_cidr
-  availability_zone = data.aws_availability_zones.available.names[1]
-
-  tags = {
-    Name = "civic-pulse-private-subnet-2"
-  }
-}
-
-
-
-
-
-
-
-# Route Table for Public Subnets
-resource "aws_route_table" "public_route_table" {
+resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.civic_pulse_vpc.id
 
   route {
-    cidr_block      = "0.0.0.0/0"
-    gateway_id      = aws_internet_gateway.civic_pulse_igw.id
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.civic_pulse_igw.id
   }
 
   tags = {
@@ -102,42 +78,52 @@ resource "aws_route_table" "public_route_table" {
   }
 }
 
-# Route Table Associations for Public Subnets
-resource "aws_route_table_association" "public_subnet_1_assoc" {
-  subnet_id      = aws_subnet.public_subnet_1.id
-  route_table_id = aws_route_table.public_route_table.id
+resource "aws_route_table_association" "public_subnet_assoc" {
+  subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.public_rt.id
 }
 
-resource "aws_route_table_association" "public_subnet_2_assoc" {
-  subnet_id      = aws_subnet.public_subnet_2.id
-  route_table_id = aws_route_table.public_route_table.id
-}
-
-
-
-
-
-
-# Security Group for EKS Control Plane
-resource "aws_security_group" "eks_control_plane_sg" {
-  name        = "civic-pulse-eks-control-plane-sg"
-  description = "Security group for EKS control plane"
-  vpc_id      = aws_vpc.civic_pulse_vpc.id
-
-  tags = {
-    Name = "civic-pulse-eks-control-plane-sg"
-  }
-}
-
-# Security Group for EKS Worker Nodes
-resource "aws_security_group" "eks_worker_sg" {
-  name        = "civic-pulse-eks-worker-sg"
-  description = "Security group for EKS worker nodes"
+resource "aws_security_group" "civic_pulse_sg" {
+  name        = "civic-pulse-sg"
+  description = "Security group for Civic Pulse EC2"
   vpc_id      = aws_vpc.civic_pulse_vpc.id
 
   ingress {
-    from_port   = 0
-    to_port     = 65535
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Client App"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Server API"
+    from_port   = 5000
+    to_port     = 5000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "MongoDB"
+    from_port   = 27017
+    to_port     = 27017
     protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr]
   }
@@ -150,129 +136,51 @@ resource "aws_security_group" "eks_worker_sg" {
   }
 
   tags = {
-    Name = "civic-pulse-eks-worker-sg"
+    Name = "civic-pulse-sg"
   }
 }
 
-# IAM Role for EKS Cluster
-resource "aws_iam_role" "eks_cluster_role" {
-  name = "civic-pulse-eks-cluster-role"
+resource "aws_key_pair" "civic_pulse_key" {
+  key_name   = var.key_name
+  public_key = file(var.public_key_path)
+}
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
-      }
-    ]
-  })
+resource "aws_instance" "civic_pulse_ec2" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = var.instance_type
+  key_name               = aws_key_pair.civic_pulse_key.key_name
+  subnet_id              = aws_subnet.public_subnet.id
+  vpc_security_group_ids = [aws_security_group.civic_pulse_sg.id]
+
+  root_block_device {
+    volume_size = 20
+    volume_type = "gp3"
+  }
+
+  user_data = <<-USERDATA
+    #!/bin/bash
+    set -e
+    apt-get update -y
+    apt-get install -y ca-certificates curl gnupg
+
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    apt-get update -y
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+    systemctl enable docker
+    systemctl start docker
+    usermod -aG docker ubuntu
+
+    mkdir -p /home/ubuntu/civic-pulse
+    chown ubuntu:ubuntu /home/ubuntu/civic-pulse
+  USERDATA
 
   tags = {
-    Name = "civic-pulse-eks-cluster-role"
+    Name = "civic-pulse-ec2"
   }
-}
-
-resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.eks_cluster_role.name
-}
-
-# IAM Role for EKS Worker Nodes
-resource "aws_iam_role" "eks_worker_role" {
-  name = "civic-pulse-eks-worker-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = {
-    Name = "civic-pulse-eks-worker-role"
-  }
-}
-
-resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.eks_worker_role.name
-}
-
-resource "aws_iam_role_policy_attachment" "eks_worker_cni_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.eks_worker_role.name
-}
-
-resource "aws_iam_role_policy_attachment" "eks_worker_registry_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.eks_worker_role.name
-}
-
-# EKS Cluster
-resource "aws_eks_cluster" "civic_pulse_cluster" {
-  name            = var.cluster_name
-  role_arn        = aws_iam_role.eks_cluster_role.arn
-  version         = var.kubernetes_version
-
-  vpc_config {
-    subnet_ids              = [
-      aws_subnet.public_subnet_1.id,
-      aws_subnet.public_subnet_2.id
-    ]
-    security_group_ids      = [aws_security_group.eks_control_plane_sg.id]
-    endpoint_private_access = true
-    endpoint_public_access  = true
-  }
-
-  tags = {
-    Name = "civic-pulse-eks-cluster"
-  }
-
-  depends_on = [aws_iam_role_policy_attachment.eks_cluster_policy]
-}
-
-# EKS Node Group
-resource "aws_eks_node_group" "civic_pulse_nodes" {
-  cluster_name    = aws_eks_cluster.civic_pulse_cluster.name
-  node_group_name = "civic-pulse-node-group"
-  node_role_arn   = aws_iam_role.eks_worker_role.arn
-  subnet_ids      = [
-    aws_subnet.public_subnet_1.id,
-    aws_subnet.public_subnet_2.id
-  ]
-
-  scaling_config {
-    desired_size = 2
-    max_size     = 3
-    min_size     = 1
-  }
-
-  instance_types = ["t3.small"]
-  ami_type       = "AL2_x86_64"
-  capacity_type  = "ON_DEMAND"
-
-  tags = {
-    Name = "civic-pulse-node-group"
-  }
-
-  depends_on = [
-    aws_iam_role_policy_attachment.eks_worker_node_policy,
-    aws_iam_role_policy_attachment.eks_worker_cni_policy,
-    aws_iam_role_policy_attachment.eks_worker_registry_policy
-  ]
-}
-
-# Data source for availability zones
-data "aws_availability_zones" "available" {
-  state = "available"
 }

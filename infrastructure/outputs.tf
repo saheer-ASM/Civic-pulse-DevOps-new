@@ -1,21 +1,11 @@
-output "eks_cluster_name" {
-  description = "EKS cluster name"
-  value       = aws_eks_cluster.civic_pulse_cluster.name
+output "ec2_public_ip" {
+  description = "Public IP of the EC2 instance"
+  value       = aws_instance.civic_pulse_ec2.public_ip
 }
 
-output "eks_cluster_endpoint" {
-  description = "EKS cluster endpoint"
-  value       = aws_eks_cluster.civic_pulse_cluster.endpoint
-}
-
-output "eks_cluster_security_group_id" {
-  description = "EKS cluster security group ID"
-  value       = aws_security_group.eks_control_plane_sg.id
-}
-
-output "eks_cluster_iam_role_arn" {
-  description = "EKS cluster IAM role ARN"
-  value       = aws_iam_role.eks_cluster_role.arn
+output "ec2_public_dns" {
+  description = "Public DNS of the EC2 instance"
+  value       = aws_instance.civic_pulse_ec2.public_dns
 }
 
 output "vpc_id" {
@@ -23,22 +13,17 @@ output "vpc_id" {
   value       = aws_vpc.civic_pulse_vpc.id
 }
 
-output "private_subnet_ids" {
-  description = "Private subnet IDs"
-  value       = [aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id]
+output "app_url" {
+  description = "Application URL"
+  value       = "http://${aws_instance.civic_pulse_ec2.public_ip}:3000"
 }
 
-output "public_subnet_ids" {
-  description = "Public subnet IDs"
-  value       = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
+output "api_url" {
+  description = "API URL"
+  value       = "http://${aws_instance.civic_pulse_ec2.public_ip}:5000"
 }
 
-output "eks_node_group_id" {
-  description = "EKS node group ID"
-  value       = aws_eks_node_group.civic_pulse_nodes.id
-}
-
-output "configure_kubectl_command" {
-  description = "Command to configure kubectl"
-  value       = "aws eks update-kubeconfig --name ${aws_eks_cluster.civic_pulse_cluster.name} --region ${var.aws_region}"
+output "ssh_command" {
+  description = "SSH command to connect"
+  value       = "ssh -i ~/.ssh/id_rsa ubuntu@${aws_instance.civic_pulse_ec2.public_ip}"
 }
