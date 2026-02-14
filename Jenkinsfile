@@ -9,8 +9,7 @@ pipeline {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')
         DOCKER_REPO = 'moshaheer'
         VERSION = "${env.BUILD_NUMBER}"
-        EC2_HOST = credentials('ec2-host')        // EC2 public IP or hostname
-        EC2_SSH_KEY = credentials('ec2-ssh-key')   // SSH private key for EC2
+        EC2_HOST = '13.222.114.152'
     }
 
     stages {
