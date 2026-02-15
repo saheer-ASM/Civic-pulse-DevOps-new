@@ -11,7 +11,7 @@ const departments = [
 
 const DepartmentSection = () => (
   <section className={styles.departmentsSection} id="departments">
-    <h2>Departments</h2>
+    <h2>Shaheer A.S.M</h2>
     <div className={styles.departmentsGrid}>
       {departments.map(dep => (
         <div key={dep.name} className={styles.departmentCard}>
