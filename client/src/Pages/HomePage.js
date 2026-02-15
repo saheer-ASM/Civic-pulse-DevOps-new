@@ -13,7 +13,7 @@ const HomePage = () => {
           <h1>CivicPulse</h1>
           <p>Report civic issues. Reach the right department efficiently.</p>
           <button className={styles.ctaButton} onClick={() => navigate("/login")}>     {/*after click tha button need to navigate to the login page*/}
-            Register a Complaint New
+            Register a Complaint 
           </button>
         </div>
       </header>
